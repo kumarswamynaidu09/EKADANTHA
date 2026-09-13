@@ -8,7 +8,7 @@ import { MusicView } from './components/views/MusicView';
 import { ScheduleView } from './components/views/ScheduleView';
 import { SettingsView } from './components/views/SettingsView';
 import { AnimatePresence, motion } from 'motion/react';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Lock } from 'lucide-react';
 import { useAudio } from './context/AudioContext';
 
 function OfflineBanner() {
@@ -46,6 +46,17 @@ function OfflineBanner() {
 
 function MainContent() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showAdminLock, setShowAdminLock] = useState(false);
+  const [attemptedTab, setAttemptedTab] = useState('');
+
+  const handleTabChange = (tab: string) => {
+    if (tab === 'schedule' || tab === 'settings') {
+      setAttemptedTab(tab === 'schedule' ? 'Schedule' : 'Settings');
+      setShowAdminLock(true);
+    } else {
+      setActiveTab(tab);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col relative font-sans">
@@ -73,7 +84,56 @@ function MainContent() {
         </AnimatePresence>
       </main>
 
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={handleTabChange} />
+
+      {/* Admin Access Only Popup Modal */}
+      <AnimatePresence>
+        {showAdminLock && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAdminLock(false)}
+              className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal Card */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="relative w-full max-w-sm bg-white rounded-2xl border border-neutral-200/80 p-6 shadow-xl text-center z-10 overflow-hidden"
+            >
+              {/* Top ambient highlight */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-400 to-orange-600" />
+              
+              <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-orange-50 text-orange-600 mb-4 border border-orange-100">
+                <Lock className="w-5 h-5" />
+              </div>
+
+              <h3 className="text-base font-bold text-neutral-800 leading-snug">
+                Admin Access Only
+              </h3>
+              
+              <p className="text-xs text-neutral-500 mt-2.5 leading-relaxed">
+                The <span className="font-semibold text-neutral-700">{attemptedTab}</span> module is currently locked. Administrative authorization is required to access these configurations.
+              </p>
+
+              <div className="mt-6">
+                <button
+                  onClick={() => setShowAdminLock(false)}
+                  className="w-full py-2 px-4 bg-neutral-900 hover:bg-neutral-800 text-white rounded-xl text-xs font-semibold shadow transition active:scale-98"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

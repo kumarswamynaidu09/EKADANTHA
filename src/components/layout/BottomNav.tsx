@@ -1,4 +1,4 @@
-import { LayoutDashboard, Music, CalendarClock, SlidersHorizontal } from 'lucide-react';
+import { LayoutDashboard, Music, CalendarClock, SlidersHorizontal, Lock } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface BottomNavProps {
@@ -10,8 +10,8 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'music', label: 'Music', icon: Music },
-    { id: 'schedule', label: 'Schedule', icon: CalendarClock },
-    { id: 'settings', label: 'Settings', icon: SlidersHorizontal },
+    { id: 'schedule', label: 'Schedule', icon: CalendarClock, isLocked: true },
+    { id: 'settings', label: 'Settings', icon: SlidersHorizontal, isLocked: true },
   ];
 
   return (
@@ -32,6 +32,11 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
             >
               <div className="relative p-1 rounded-full z-10">
                 <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'scale-110' : 'scale-100'}`} />
+                {item.isLocked && (
+                  <div className="absolute -top-0.5 -right-0.5 bg-neutral-200 text-neutral-500 rounded-full p-0.5 border border-white">
+                    <Lock className="w-2.5 h-2.5" />
+                  </div>
+                )}
               </div>
               {isActive && (
                 <motion.div 
@@ -40,7 +45,9 @@ export function BottomNav({ activeTab, setActiveTab }: BottomNavProps) {
                   transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 />
               )}
-              <span className="text-[11px] mt-0.5 tracking-tight z-10">{item.label}</span>
+              <span className="text-[11px] mt-0.5 tracking-tight z-10 flex items-center gap-0.5">
+                {item.label}
+              </span>
             </button>
           );
         })}
