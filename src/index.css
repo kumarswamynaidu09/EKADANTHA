@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    background-color: #f7f7f8;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+}
+
+.mandala-bg {
+  background-image: radial-gradient(#ea580c 0.75px, transparent 0.75px), radial-gradient(#ea580c 0.75px, #fbfbfa 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+  opacity: 0.025;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 24px;
+  width: 24px;
+  border-radius: 50%;
+  background: #ea580c;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(234, 88, 12, 0.45);
+  border: 3px solid #ffffff;
+  margin-top: -8px;
+  transition: transform 0.15s ease;
+}
+input[type=range]::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 9999px;
+  background: #e4e4e7;
+}
+
+@keyframes equalizer {
+  0%, 100% { height: 4px; }
+  50% { height: 16px; }
+}
+.eq-bar-1 { animation: equalizer 0.8s ease-in-out infinite; }
+.eq-bar-2 { animation: equalizer 0.9s ease-in-out 0.2s infinite; }
+.eq-bar-3 { animation: equalizer 0.7s ease-in-out 0.4s infinite; }
+.eq-bar-4 { animation: equalizer 1.1s ease-in-out 0.1s infinite; }
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

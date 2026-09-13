@@ -1,0 +1,8 @@
+{
+  "name": "Remix Ganesh Audio Control Pro",
+  "description": "A fully interactive, high-fidelity audio control prototype featuring seamless state management and smooth navigation for your existing interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
