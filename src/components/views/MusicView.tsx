@@ -215,11 +215,19 @@ export function MusicView() {
                   );
                 })
               ) : (
-                <div className="p-8 text-center text-neutral-500">
-                  <Search className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
-                  <p className="text-sm font-semibold text-neutral-700">No songs found</p>
-                  <p className="text-xs">Try another search term.</p>
-                </div>
+                sdSongs.length === 0 ? (
+                  <div className="p-10 text-center text-neutral-500">
+                    <RefreshCw className="w-8 h-8 mx-auto text-orange-500 mb-3 animate-spin" />
+                    <p className="text-sm font-semibold text-neutral-700">Waiting for music library...</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">Connecting to Pico SD Card mapping feed.</p>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-neutral-500">
+                    <Search className="w-8 h-8 mx-auto text-neutral-300 mb-2" />
+                    <p className="text-sm font-semibold text-neutral-700">No songs found</p>
+                    <p className="text-xs">Try another search term.</p>
+                  </div>
+                )
               )}
             </div>
           </motion.div>

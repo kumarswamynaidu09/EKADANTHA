@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { Song, Playlist, Schedule, Member } from '../types';
-import { INITIAL_SD_SONGS, INITIAL_PLAYLISTS, INITIAL_SCHEDULES, INITIAL_MEMBERS } from '../data/mock';
+import { INITIAL_PLAYLISTS, INITIAL_SCHEDULES, INITIAL_MEMBERS } from '../data/mock';
 import { 
   parsePlayerStatus, 
   parseMusicLibrary, 
@@ -53,6 +53,7 @@ const AudioContext = createContext<AudioContextType | undefined>(undefined);
 export function AudioProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [currentTrackId, setCurrentTrackId] = useState<number>(1);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(15); // Storing hardware volume (0-30)
   const [isShuffle, setIsShuffle] = useState(false);
@@ -60,15 +61,37 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [isSystemOnline, setIsSystemOnline] = useState(true);
   const [commandStatus, setCommandStatus] = useState<string | null>(null);
   
-  const [sdSongs, setSdSongs] = useState<Song[]>(INITIAL_SD_SONGS);
+  const [sdSongs, setSdSongs] = useState<Song[]>([]);
   const [playlists] = useState<Playlist[]>(INITIAL_PLAYLISTS);
   const [schedules, setSchedules] = useState<Schedule[]>(INITIAL_SCHEDULES);
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  const currentTrack = sdSongs[currentTrackIndex] || sdSongs[0] || INITIAL_SD_SONGS[0];
+  // Safe placeholder song when library has not loaded yet
+  const placeholderTrack: Song = {
+    id: 0,
+    fileNum: "00 / 00",
+    title: "Waiting for Music Library...",
+    artist: "Pico SD Card",
+    category: "System",
+    duration: "0:00",
+    durationSec: 240,
+    artwork: "⏳"
+  };
+
+  const currentTrack = sdSongs[currentTrackIndex] || sdSongs[0] || placeholderTrack;
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const volumePublishTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync track index dynamically as soon as sdSongs library or currentTrackId updates
+  useEffect(() => {
+    if (sdSongs.length > 0) {
+      const index = sdSongs.findIndex(s => s.id === currentTrackId);
+      if (index !== -1) {
+        setCurrentTrackIndex(index);
+      }
+    }
+  }, [sdSongs, currentTrackId]);
 
   // Real-time SSE listener
   useEffect(() => {
@@ -92,15 +115,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             setVolume(parsed.volume);
             setIsShuffle(parsed.isShuffle);
             setIsRepeat(parsed.isRepeat);
-
-            // Dynamically synchronize the song selection based on trackId
-            setSdSongs((currentSongs) => {
-              const index = currentSongs.findIndex(s => s.id === parsed.trackId);
-              if (index !== -1) {
-                setCurrentTrackIndex(index);
-              }
-              return currentSongs;
-            });
+            setCurrentTrackId(parsed.trackId);
           }
         } else if (feed === "music-library") {
           const parsedSongs = parseMusicLibrary(payload);
@@ -132,7 +147,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     if (isPlaying && isSystemOnline) {
       timerRef.current = setInterval(() => {
         setCurrentTime((prev) => {
-          if (prev >= currentTrack.durationSec) {
+          if (prev >= (currentTrack?.durationSec || 240)) {
             return 0; // Loops locally, awaits formal track change status from Pico
           }
           return prev + 1;
@@ -144,7 +159,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, isSystemOnline, currentTrackIndex, currentTrack.durationSec]);
+  }, [isPlaying, isSystemOnline, currentTrackIndex, currentTrack?.durationSec]);
 
   const addToast = (message: string) => {
     const id = Date.now();
@@ -161,11 +176,28 @@ export function AudioProvider({ children }: { children: ReactNode }) {
        return;
     }
     setCommandStatus(`Dispatched: ${endpoint}`);
-    setTimeout(() => {
-      if (callback) callback();
-      if (successMessage) addToast(successMessage);
-      setTimeout(() => setCommandStatus(null), 1000);
-    }, 150);
+    
+    if (endpoint === "GET /api/device/songs") {
+      fetch("/api/rescan", { method: "POST" })
+        .then(res => res.json())
+        .then(() => {
+          if (callback) callback();
+          if (successMessage) addToast(successMessage);
+          setTimeout(() => setCommandStatus(null), 1000);
+        })
+        .catch(err => {
+          console.error("Rescan dispatch failed", err);
+          if (callback) callback();
+          if (successMessage) addToast(successMessage);
+          setTimeout(() => setCommandStatus(null), 1000);
+        });
+    } else {
+      setTimeout(() => {
+        if (callback) callback();
+        if (successMessage) addToast(successMessage);
+        setTimeout(() => setCommandStatus(null), 1000);
+      }, 150);
+    }
   };
 
   const togglePlay = () => {

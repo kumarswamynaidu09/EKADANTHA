@@ -1,5 +1,4 @@
 import { Song, Schedule } from '../types';
-import { INITIAL_SD_SONGS } from '../data/mock';
 
 // Parse player-status payload
 // Format: PLAYING|12|30|SHUFFLE_OFF|REPEAT_OFF
@@ -41,17 +40,33 @@ export function parseMusicLibrary(payload: string): Song[] {
     const id = parseInt(idStr, 10);
     if (isNaN(id)) continue;
 
-    const enriched = INITIAL_SD_SONGS.find(s => s.id === id || s.title.toLowerCase() === title.toLowerCase());
-    
+    // Generate neat metadata based on song title
+    let artwork = "🕉️";
+    let category = "Chant";
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes("aarti")) {
+      artwork = "🪔";
+      category = "Aarti";
+    } else if (lowerTitle.includes("bhajan") || lowerTitle.includes("stuti")) {
+      artwork = "🌸";
+      category = "Bhajan";
+    } else if (lowerTitle.includes("chant") || lowerTitle.includes("namah") || lowerTitle.includes("namo")) {
+      artwork = "🧘";
+      category = "Chant";
+    } else if (lowerTitle.includes("deva") || lowerTitle.includes("shree") || lowerTitle.includes("morya")) {
+      artwork = "✨";
+      category = "Devotional";
+    }
+
     parsedSongs.push({
       id,
       fileNum: `${id < 10 ? '0' : ''}${id} / ${lines.length}`,
-      title: title || (enriched ? enriched.title : `Chant ${id}`),
-      artist: enriched ? enriched.artist : "Devotional",
-      category: enriched ? enriched.category : "Chant",
-      duration: enriched ? enriched.duration : "4:00",
-      durationSec: enriched ? enriched.durationSec : 240,
-      artwork: enriched ? enriched.artwork : "🕉️"
+      title: title || `Track ${id}`,
+      artist: "Pico SD Card",
+      category,
+      duration: "4:00",
+      durationSec: 240,
+      artwork
     });
   }
   return parsedSongs;

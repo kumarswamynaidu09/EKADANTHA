@@ -111,6 +111,26 @@ if (AIO_KEY && AIO_KEY.trim() !== "") {
   console.warn(
     "[MQTT] ADAFRUIT_IO_KEY is not defined in .env. Falling back to simulated Pico mode."
   );
+
+  // Simulate Pico booting up and publishing the SD card music library after 2.5 seconds
+  setTimeout(() => {
+    const mockPayload = [
+      "1|Sukhkarta Dukhharta",
+      "2|Ganesh Aarti",
+      "3|Shendur Lal Chadhayo",
+      "4|Vakratunda Mahakaya",
+      "5|Deva Shree Ganesha",
+      "6|Ganpati Bappa Morya",
+      "7|Jai Ganesh Deva",
+      "8|Gajanana Shri Ganraya",
+      "9|Ekadantaya Vakratundaya",
+      "10|Om Gan Ganapataye Namo Namah"
+    ].join("\n");
+
+    feedCache["music-library"] = mockPayload;
+    broadcastToClients("music-library", mockPayload);
+    console.log("[Simulation] Pico published dynamic SD card music-library payload!");
+  }, 2500);
 }
 
 // REST API Endpoints
@@ -236,6 +256,42 @@ app.post("/api/command", (req, res) => {
     }, 150);
 
     return res.json({ success: true, mode: "simulated", status: "simulated_ack" });
+  }
+});
+
+// Rescan SD card endpoint
+app.post("/api/rescan", (req, res) => {
+  const topic = `${AIO_USERNAME}/feeds/music-control`;
+  
+  if (mqttClient && mqttClient.connected) {
+    mqttClient.publish(topic, "RESCAN", { qos: 0 }, (err) => {
+      if (err) {
+        console.error("[MQTT Publish Error] Failed to publish RESCAN to music-control:", err);
+        return res.status(500).json({ error: "Failed to publish RESCAN command" });
+      }
+      return res.json({ success: true, mode: "real", status: "rescan_published" });
+    });
+  } else {
+    // Simulated Rescan Behavior
+    console.log("[Simulating Rescan] Sending updated music library payload after 1 second...");
+    setTimeout(() => {
+      const mockPayload = [
+        "1|Sukhkarta Dukhharta",
+        "2|Ganesh Aarti",
+        "3|Shendur Lal Chadhayo",
+        "4|Vakratunda Mahakaya",
+        "5|Deva Shree Ganesha",
+        "6|Ganpati Bappa Morya",
+        "7|Jai Ganesh Deva",
+        "8|Gajanana Shri Ganraya",
+        "9|Ekadantaya Vakratundaya",
+        "10|Om Gan Ganapataye Namo Namah"
+      ].join("\n");
+      
+      feedCache["music-library"] = mockPayload;
+      broadcastToClients("music-library", mockPayload);
+    }, 1000);
+    return res.json({ success: true, mode: "simulated", status: "simulated_rescan_ack" });
   }
 });
 
