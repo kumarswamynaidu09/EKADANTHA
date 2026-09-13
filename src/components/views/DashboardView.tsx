@@ -298,13 +298,13 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
           <div className="p-3 bg-neutral-50/80 rounded-2xl border border-neutral-100">
             <div className="flex items-center justify-between text-xs mb-1">
               <span className="text-neutral-500 font-medium">Amp State</span>
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span className="w-2 h-2 rounded-full bg-neutral-400"></span>
             </div>
             <div className="text-sm font-bold text-neutral-900 flex items-center gap-1">
-              <Zap className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="truncate">Power Active</span>
+              <Zap className="w-3.5 h-3.5 text-neutral-400" />
+              <span className="truncate">Power Active (Read-Only)</span>
             </div>
-            <span className="text-[10px] text-emerald-700 font-medium mt-1 block truncate">🟢 Hardware Monitored</span>
+            <span className="text-[10px] text-neutral-400 font-medium mt-1 block truncate">⚪ Awaiting Telemetry</span>
           </div>
 
           <div className="p-3 bg-neutral-50/80 rounded-2xl border border-neutral-100">
@@ -314,7 +314,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
             </div>
             <div className="text-sm font-bold text-neutral-900 flex items-center gap-1">
               <Cpu className="w-3.5 h-3.5 text-blue-600" />
-              <span>{isSystemOnline ? "Online" : "Offline"}</span>
+              <span className="truncate">{isSystemOnline ? "Pico Controller Online" : "Pico Controller Offline"}</span>
             </div>
             <span className="text-[10px] text-neutral-400 mt-1 block font-mono">UART 9600 baud</span>
           </div>

@@ -43,7 +43,7 @@ export function Header() {
                   )}
                 </span>
                 <span className={isSystemOnline ? "text-emerald-700 font-semibold" : "text-rose-600 font-semibold"}>
-                  {isSystemOnline ? "System Online" : "System Offline"}
+                  {isSystemOnline ? "Pico Controller Online" : "Pico Controller Offline"}
                 </span>
               </button>
               <span className="text-neutral-300">•</span>

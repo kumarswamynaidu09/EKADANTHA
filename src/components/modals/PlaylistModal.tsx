@@ -9,25 +9,23 @@ interface PlaylistModalProps {
 }
 
 export function PlaylistModal({ playlist, onClose }: PlaylistModalProps) {
-  const { sdSongs, playTrack, triggerCommand, currentTrack, isPlaying } = useAudio();
+  const { sdSongs, playPlaylist, playTrack, currentTrack, isPlaying, toggleShuffle, addToast } = useAudio();
 
   // Create a simulated list of songs for this playlist
   // In a real app this would filter based on playlist mappings
   const playlistSongs = sdSongs.slice(0, playlist.count);
 
   const handlePlayAll = () => {
-    triggerCommand(`POST /api/player/play {"playlist": "${playlist.id}"}`, `Playing ${playlist.name}`, () => {
-      playTrack(0); // Simulate starting the first track
-      onClose();
-    });
+    playPlaylist(playlist.name);
+    onClose();
   };
 
   const handleShuffle = () => {
-    triggerCommand(`POST /api/player/shuffle {"playlist": "${playlist.id}"}`, `Shuffling ${playlist.name}`, () => {
-      const randomIdx = Math.floor(Math.random() * playlistSongs.length);
-      playTrack(randomIdx);
+    toggleShuffle(); // Toggle shuffle state
+    setTimeout(() => {
+      playPlaylist(playlist.name);
       onClose();
-    });
+    }, 150);
   };
 
   return (

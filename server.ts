@@ -13,10 +13,17 @@ const AIO_USERNAME = process.env.ADAFRUIT_IO_USERNAME || "kumarswamynaidu09";
 const AIO_KEY = process.env.ADAFRUIT_IO_KEY;
 
 // Cache the latest received status payloads for each feed
-const feedCache: Record<string, string> = {
-  "device-status": "ONLINE", // Default to ONLINE to prevent immediate offline warning if not published yet
-  "player-status": "PAUSED|1|20|SHUFFLE_OFF|REPEAT_OFF", // Seeding standard initial state
-  "music-library": "", // Empty initially, waits for Pico or sends default simulation
+const isAioConfigured = !!AIO_KEY && AIO_KEY.trim() !== "";
+const feedCache: Record<string, string> = isAioConfigured ? {
+  "device-status": "OFFLINE", // Starts offline, waiting for actual Pico heartbeat
+  "player-status": "",
+  "music-library": "",
+  "playlist-control": "",
+  "schedule-status": ""
+} : {
+  "device-status": "ONLINE", 
+  "player-status": "PAUSED|1|20|SHUFFLE_OFF|REPEAT_OFF", 
+  "music-library": "", 
   "playlist-control": "",
   "schedule-status": "SCHEDULER|ON|NEXT|06:30|Pratah Morning Aarti"
 };
@@ -58,8 +65,6 @@ if (AIO_KEY && AIO_KEY.trim() !== "") {
 
     mqttClient.on("connect", () => {
       console.log("[MQTT] Connected to Adafruit IO MQTT Broker!");
-      broadcastToClients("device-status", "ONLINE");
-      feedCache["device-status"] = "ONLINE";
 
       // Subscribe to all 8 feeds
       const feeds = [
@@ -236,15 +241,18 @@ app.post("/api/command", (req, res) => {
         feedCache["player-status"] = newPlayerStatus;
         broadcastToClients("player-status", newPlayerStatus);
       } else if (feed === "schedule-control") {
-        // e.g. SCHEDULE_SET|01|Morning Aarti|06:00|DAILY|PLAYLIST|Morning Bhajans|ON
-        if (payloadStr.startsWith("SCHEDULE_SET")) {
-          const parts = payloadStr.split("|");
-          const name = parts[2];
-          const time = parts[3];
-          const nextSched = `SCHEDULER|ON|NEXT|${time}|${name}`;
-          feedCache["schedule-status"] = nextSched;
-          broadcastToClients("schedule-status", nextSched);
-        } else if (payloadStr.startsWith("SCHEDULE_DELETE")) {
+        if (payloadStr.startsWith("SCHEDULE_SET:")) {
+          const parts = payloadStr.split(":");
+          if (parts[1]) {
+            const args = parts[1].split(",");
+            const name = args[1] || "Schedule";
+            const hh = args[2] || "06";
+            const mm = args[3] || "30";
+            const nextSched = `SCHEDULER|ON|NEXT|${hh}:${mm}|${name}`;
+            feedCache["schedule-status"] = nextSched;
+            broadcastToClients("schedule-status", nextSched);
+          }
+        } else if (payloadStr.startsWith("SCHEDULE_DELETE:")) {
           const nextSched = `SCHEDULER|ON|NEXT|--:--|No Schedule`;
           feedCache["schedule-status"] = nextSched;
           broadcastToClients("schedule-status", nextSched);

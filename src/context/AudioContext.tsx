@@ -7,6 +7,10 @@ import {
   serializeSchedule, 
   serializeScheduleDelete, 
   serializeScheduleToggle,
+  serializePlaylistPlay,
+  serializePlaylistCreate,
+  serializePlaylistDelete,
+  serializePlaylistStop,
   sendCommandToServer 
 } from '../services/adafruitIO';
 
@@ -46,6 +50,11 @@ interface AudioContextType {
   removeMember: (id: number) => void;
   triggerCommand: (endpoint: string, successMessage?: string, callback?: () => void) => void;
   addToast: (message: string) => void;
+  
+  playPlaylist: (name: string) => void;
+  createPlaylist: (name: string, trackIds: (string|number)[]) => Promise<boolean>;
+  deletePlaylist: (name: string) => void;
+  stopPlaylist: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -58,7 +67,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [volume, setVolume] = useState(15); // Storing hardware volume (0-30)
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
-  const [isSystemOnline, setIsSystemOnline] = useState(true);
+  const [isSystemOnline, setIsSystemOnline] = useState(false); // Default offline, waits for real heartbeat
   const [commandStatus, setCommandStatus] = useState<string | null>(null);
   
   const [sdSongs, setSdSongs] = useState<Song[]>([]);
@@ -66,6 +75,10 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [schedules, setSchedules] = useState<Schedule[]>(INITIAL_SCHEDULES);
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+
+  // Configurable stale-status timeout in milliseconds
+  const HEARTBEAT_TIMEOUT = 15000; // 15 seconds
+  const lastHeartbeatRef = useRef<number>(0); // Initialize as 0 so it expects first heartbeat
 
   // Safe placeholder song when library has not loaded yet
   const placeholderTrack: Song = {
@@ -93,6 +106,18 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [sdSongs, currentTrackId]);
 
+  // Periodic stale-status timeout detector
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      // Check if last heartbeat is older than timeout
+      if (isSystemOnline && (lastHeartbeatRef.current > 0) && (Date.now() - lastHeartbeatRef.current > HEARTBEAT_TIMEOUT)) {
+        console.warn(`[Pico Status] Stale timeout reached (${HEARTBEAT_TIMEOUT}ms). Marking controller offline.`);
+        setIsSystemOnline(false);
+      }
+    }, 2000);
+    return () => clearInterval(checkInterval);
+  }, [isSystemOnline]);
+
   // Real-time SSE listener
   useEffect(() => {
     console.log("[AudioContext] Connecting to /api/status-stream...");
@@ -107,8 +132,16 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
         if (feed === "device-status") {
           const isOnline = payload === "ONLINE" || payload === "WIFI_CONNECTED" || payload === "MQTT_CONNECTED" || payload === "RTC_OK";
-          setIsSystemOnline(isOnline);
+          if (isOnline) {
+            setIsSystemOnline(true);
+            lastHeartbeatRef.current = Date.now();
+          } else if (payload === "OFFLINE") {
+            setIsSystemOnline(false);
+          }
         } else if (feed === "player-status") {
+          // Received feedback from Pico! Update heartbeat & online status
+          lastHeartbeatRef.current = Date.now();
+          setIsSystemOnline(true);
           const parsed = parsePlayerStatus(payload);
           if (parsed) {
             setIsPlaying(parsed.state === "PLAYING");
@@ -118,12 +151,17 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             setCurrentTrackId(parsed.trackId);
           }
         } else if (feed === "music-library") {
+          // Received library from Pico! Update heartbeat & online status
+          lastHeartbeatRef.current = Date.now();
+          setIsSystemOnline(true);
           const parsedSongs = parseMusicLibrary(payload);
           if (parsedSongs && parsedSongs.length > 0) {
             setSdSongs(parsedSongs);
           }
         } else if (feed === "schedule-status") {
-          // Log schedule update in UI feedback status bar
+          // Received schedule update from Pico! Update heartbeat & online status
+          lastHeartbeatRef.current = Date.now();
+          setIsSystemOnline(true);
           setCommandStatus(`Pico Schedule: ${payload}`);
           setTimeout(() => setCommandStatus(null), 2000);
         }
@@ -206,15 +244,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     const command = nextState ? "PLAY" : "PAUSE";
     
     setCommandStatus(`Sending command: ${command}`);
-    // Optimistic UI response
-    setIsPlaying(nextState);
 
     sendCommandToServer("music-control", command).then((success) => {
       if (success) {
         addToast(nextState ? "Playback request sent" : "Pause request sent");
       } else {
         addToast("Error contacting Pico controller");
-        setIsPlaying(!nextState); // Rollback
       }
       setCommandStatus(null);
     });
@@ -283,25 +318,29 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   const toggleShuffle = () => {
     const nextState = !isShuffle;
-    setIsShuffle(nextState);
     const command = nextState ? "SHUFFLE_ON" : "SHUFFLE_OFF";
+    setCommandStatus(`Sending command: ${command}`);
     sendCommandToServer("music-control", command).then((success) => {
-      if (!success) {
-        setIsShuffle(!nextState); // Rollback
+      if (success) {
+        addToast(nextState ? "Shuffle ON request sent" : "Shuffle OFF request sent");
+      } else {
         addToast("Error contacting Pico controller");
       }
+      setCommandStatus(null);
     });
   };
 
   const toggleRepeat = () => {
     const nextState = !isRepeat;
-    setIsRepeat(nextState);
     const command = nextState ? "REPEAT_ON" : "REPEAT_OFF";
+    setCommandStatus(`Sending command: ${command}`);
     sendCommandToServer("music-control", command).then((success) => {
-      if (!success) {
-        setIsRepeat(!nextState); // Rollback
+      if (success) {
+        addToast(nextState ? "Repeat ON request sent" : "Repeat OFF request sent");
+      } else {
         addToast("Error contacting Pico controller");
       }
+      setCommandStatus(null);
     });
   };
 
@@ -372,6 +411,59 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     addToast("Member removed successfully");
   };
 
+  const playPlaylist = (name: string) => {
+    const payload = serializePlaylistPlay(name);
+    setCommandStatus(`Playing Playlist: ${name}`);
+    sendCommandToServer("playlist-control", payload).then((success) => {
+      if (success) {
+        addToast(`Playing Playlist "${name}"`);
+      } else {
+        addToast("Failed to reach Pico controller");
+      }
+      setCommandStatus(null);
+    });
+  };
+
+  const createPlaylist = (name: string, trackIds: (string|number)[]): Promise<boolean> => {
+    const payload = serializePlaylistCreate(name, trackIds);
+    setCommandStatus(`Creating Playlist: ${name}`);
+    return sendCommandToServer("playlist-control", payload).then((success) => {
+      if (success) {
+        addToast(`Playlist "${name}" created on Pico`);
+      } else {
+        addToast("Failed to reach Pico controller");
+      }
+      setCommandStatus(null);
+      return success;
+    });
+  };
+
+  const deletePlaylist = (name: string) => {
+    const payload = serializePlaylistDelete(name);
+    setCommandStatus(`Deleting Playlist: ${name}`);
+    sendCommandToServer("playlist-control", payload).then((success) => {
+      if (success) {
+        addToast(`Playlist "${name}" deleted from Pico`);
+      } else {
+        addToast("Failed to reach Pico controller");
+      }
+      setCommandStatus(null);
+    });
+  };
+
+  const stopPlaylist = () => {
+    const payload = serializePlaylistStop();
+    setCommandStatus("Stopping Playlist");
+    sendCommandToServer("playlist-control", payload).then((success) => {
+      if (success) {
+        addToast("Playlist stopped on Pico");
+      } else {
+        addToast("Failed to reach Pico controller");
+      }
+      setCommandStatus(null);
+    });
+  };
+
   return (
     <AudioContext.Provider value={{
       isPlaying,
@@ -402,7 +494,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
       addMember: addMemberObj,
       removeMember,
       triggerCommand,
-      addToast
+      addToast,
+      playPlaylist,
+      createPlaylist,
+      deletePlaylist,
+      stopPlaylist
     }}>
       {children}
     </AudioContext.Provider>

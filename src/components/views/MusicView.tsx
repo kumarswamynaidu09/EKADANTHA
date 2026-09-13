@@ -18,7 +18,8 @@ export function MusicView() {
     currentTime, 
     isSystemOnline, 
     playTrack,
-    triggerCommand
+    triggerCommand,
+    playPlaylist
   } = useAudio();
 
   const [musicTab, setMusicTab] = useState<'songs' | 'playlists'>('songs');
@@ -265,9 +266,7 @@ export function MusicView() {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      triggerCommand(`POST /api/player/play {"playlist": "${pl.id}"}`, `Playing ${pl.name} playlist`, () => {
-                        playTrack(0);
-                      });
+                      playPlaylist(pl.name);
                     }}
                     className="text-xs font-semibold bg-orange-600 hover:bg-orange-700 text-white px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm transition active:scale-95"
                   >

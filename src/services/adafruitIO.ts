@@ -96,29 +96,75 @@ export function parseScheduleStatus(payload: string): ScheduleStatusParsed | nul
 
 // Serialize schedules
 export function serializeSchedule(schedule: Schedule): string {
-  const activeStr = schedule.active ? "ON" : "OFF";
-  const idStr = String(schedule.id).padStart(2, '0');
-  // Format: SCHEDULE_SET|ID|Name|Time|Days|Action|PlaylistOrTrack|ActiveState
-  return `SCHEDULE_SET|${idStr}|${schedule.name}|${schedule.time}|${schedule.days.toUpperCase()}|PLAYLIST|${schedule.playlist}|${activeStr}`;
+  // Format: SCHEDULE_SET:ID,NAME,HH,MM,DAYS,ACTION,TARGET
+  const cleanId = (schedule.id % 100);
+  const cleanName = schedule.name.replace(/[,:]/g, '');
+
+  let hh = "06";
+  let mm = "30";
+  const match = schedule.time.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+  if (match) {
+    let hour = parseInt(match[1]);
+    const min = parseInt(match[2]);
+    const meridiem = match[3];
+    if (meridiem) {
+      if (meridiem.toUpperCase() === "PM" && hour < 12) hour += 12;
+      if (meridiem.toUpperCase() === "AM" && hour === 12) hour = 0;
+    }
+    hh = String(hour).padStart(2, '0');
+    mm = String(min).padStart(2, '0');
+  }
+
+  // Parse days decimal bitmask
+  let daysVal = 0;
+  const dStr = schedule.days.toLowerCase();
+  if (dStr.includes("daily") || dStr.includes("all")) {
+    daysVal = 127;
+  } else {
+    if (dStr.includes("sun")) daysVal |= 1;
+    if (dStr.includes("mon")) daysVal |= 2;
+    if (dStr.includes("tue")) daysVal |= 4;
+    if (dStr.includes("wed")) daysVal |= 8;
+    if (dStr.includes("thu")) daysVal |= 16;
+    if (dStr.includes("fri")) daysVal |= 32;
+    if (dStr.includes("sat")) daysVal |= 64;
+    if (daysVal === 0) daysVal = 127;
+  }
+
+  // Parse target from playlist
+  let target = "PLAYLIST:Morning";
+  const trackMatch = schedule.playlist.match(/Track\s*#(\d+)/i);
+  if (trackMatch) {
+    target = `TRACK:${parseInt(trackMatch[1])}`;
+  } else {
+    const nameMatch = schedule.playlist.match(/^([A-Za-z0-9]+)/);
+    if (nameMatch) {
+      target = `PLAYLIST:${nameMatch[1]}`;
+    } else {
+      target = `PLAYLIST:${schedule.playlist}`;
+    }
+  }
+
+  return `SCHEDULE_SET:${cleanId},${cleanName},${hh},${mm},${daysVal},PLAY,${target}`;
 }
 
 export function serializeScheduleDelete(id: number): string {
-  const idStr = String(id).padStart(2, '0');
-  return `SCHEDULE_DELETE|${idStr}`;
+  const cleanId = String(id % 100).padStart(2, '0');
+  return `SCHEDULE_DELETE:${cleanId}`;
 }
 
 export function serializeScheduleToggle(id: number, active: boolean): string {
-  const idStr = String(id).padStart(2, '0');
+  const cleanId = String(id % 100).padStart(2, '0');
   const action = active ? "SCHEDULE_ENABLE" : "SCHEDULE_DISABLE";
-  return `${action}|${idStr}`;
+  return `${action}:${cleanId}`;
 }
 
 // Serialize playlists
 export function serializePlaylistPlay(name: string): string {
   return `PLAYLIST_PLAY:${name}`;
 }
-export function serializePlaylistCreate(name: string): string {
-  return `PLAYLIST_CREATE:${name}`;
+export function serializePlaylistCreate(name: string, trackIds: (string|number)[] = []): string {
+  return `PLAYLIST_CREATE:${name}:${trackIds.join(',')}`;
 }
 export function serializePlaylistDelete(name: string): string {
   return `PLAYLIST_DELETE:${name}`;
