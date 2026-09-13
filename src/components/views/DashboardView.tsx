@@ -171,18 +171,18 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
               <span className="font-bold text-neutral-800 text-sm">Volume Level</span>
             </div>
             <span className="text-base font-bold font-mono text-orange-600 bg-orange-50 px-2.5 py-0.5 rounded-lg border border-orange-200/60">
-              {volume}%
+              {Math.round((volume / 30) * 100)}%
             </span>
           </div>
 
           <p className="text-xs text-neutral-500 mb-4">
-            Controls remote master output on ESP32 & DFPlayer line-out.
+            Controls remote master output on Pico & DFPlayer line-out.
           </p>
 
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <button 
-                onClick={() => setVolume(Math.max(0, volume - 5))}
+                onClick={() => setVolume(Math.max(0, volume - 1))}
                 className="p-1.5 text-neutral-400 hover:text-neutral-700 transition active:scale-90"
               >
                 <Volume1 className="w-5 h-5" />
@@ -191,7 +191,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
                 <input 
                   type="range"
                   min="0"
-                  max="100"
+                  max="30"
                   value={volume}
                   onChange={(e) => setVolume(Number(e.target.value))}
                   className="w-full h-8"
@@ -199,7 +199,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
                 />
               </div>
               <button 
-                onClick={() => setVolume(Math.max(100, volume + 5))}
+                onClick={() => setVolume(Math.min(30, volume + 1))}
                 className="p-1.5 text-neutral-400 hover:text-neutral-700 transition active:scale-90"
               >
                 <Volume2 className="w-5 h-5" />
@@ -207,20 +207,23 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-1">
-              {[25, 50, 75, 90].map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setVolume(v)}
-                  disabled={!isSystemOnline}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-50 ${
-                    volume === v 
-                      ? 'bg-orange-600 text-white shadow-sm' 
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
-                  }`}
-                >
-                  {v}%
-                </button>
-              ))}
+              {[25, 50, 75, 90].map((v) => {
+                const targetVol = Math.round((v / 100) * 30);
+                return (
+                  <button
+                    key={v}
+                    onClick={() => setVolume(targetVol)}
+                    disabled={!isSystemOnline}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-50 ${
+                      volume === targetVol 
+                        ? 'bg-orange-600 text-white shadow-sm' 
+                        : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                    }`}
+                  >
+                    {v}%
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -306,7 +309,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
 
           <div className="p-3 bg-neutral-50/80 rounded-2xl border border-neutral-100">
             <div className="flex items-center justify-between text-xs mb-1">
-              <span className="text-neutral-500 font-medium">ESP32 + DFPlayer</span>
+              <span className="text-neutral-500 font-medium">Pico + DFPlayer</span>
               <span className={`w-2 h-2 rounded-full ${isSystemOnline ? 'bg-emerald-500' : 'bg-rose-500'}`}></span>
             </div>
             <div className="text-sm font-bold text-neutral-900 flex items-center gap-1">

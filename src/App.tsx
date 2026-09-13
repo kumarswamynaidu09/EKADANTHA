@@ -28,7 +28,7 @@ function OfflineBanner() {
       <div className="flex-1">
         <h4 className="font-bold text-sm text-rose-900">Audio Node Disconnected</h4>
         <p className="text-xs text-rose-700 mt-0.5">
-          Physical ESP32 & DFPlayer module is offline. Command dispatches will be stored and synchronized automatically when reconnecting.
+          Physical Pico & DFPlayer module is offline. Command dispatches will be stored and synchronized automatically when reconnecting.
         </p>
         <div className="mt-2 flex gap-2">
           <button 

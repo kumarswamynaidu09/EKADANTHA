@@ -24,7 +24,7 @@ export function SettingsView() {
             <HardDrive className="w-4 h-4 text-orange-600" />
             Hardware Specifications & Telemetry
           </h3>
-          <span className="text-[10px] font-mono bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded">Node ID: ESP32-WROOM-32D</span>
+          <span className="text-[10px] font-mono bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded">Node ID: Raspberry Pi Pico W</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -40,7 +40,7 @@ export function SettingsView() {
             <span className="font-mono font-semibold text-neutral-800">{lineVoltage}</span>
           </div>
           <div className="p-3 bg-neutral-50 rounded-2xl flex justify-between items-center">
-            <span className="text-neutral-500">ESP32 Core Temp</span>
+            <span className="text-neutral-500">Pico Core Temp</span>
             <span className="font-mono font-semibold text-neutral-800">{controllerTemp} (Nominal)</span>
           </div>
           <div className="p-3 bg-neutral-50 rounded-2xl flex justify-between items-center">
@@ -84,7 +84,7 @@ export function SettingsView() {
               <Code2 className="w-4 h-4 text-orange-600" />
               RESTful API Architecture Readiness
             </h3>
-            <p className="text-xs text-neutral-400 mt-0.5">ESP32 & DFPlayer REST API Endpoints Specification</p>
+            <p className="text-xs text-neutral-400 mt-0.5">Pico & DFPlayer API Endpoints Specification</p>
           </div>
           <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200">
             Live Ready

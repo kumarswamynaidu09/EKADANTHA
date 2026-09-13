@@ -75,7 +75,7 @@ export function Header() {
                 animate={{ opacity: 1 }}
                 className="hidden md:flex items-center gap-2 bg-neutral-100/80 px-2.5 py-1 rounded-full text-xs text-neutral-600 border border-neutral-200/60 font-mono"
               >
-                <span>ESP32 Node #01</span>
+                <span>Pico Controller #01</span>
               </motion.div>
             )}
           </AnimatePresence>
