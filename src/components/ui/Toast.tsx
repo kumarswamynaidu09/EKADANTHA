@@ -14,7 +14,7 @@ export function ToastContainer() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="bg-neutral-800 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg pointer-events-auto shadow-black/10 border border-neutral-700/50 text-center"
+            className="bg-[#051c13] text-amber-200 text-xs font-semibold px-4 py-2.5 rounded-full shadow-2xl pointer-events-auto border border-amber-500/30 text-center"
           >
             {toast.message}
           </motion.div>

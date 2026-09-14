@@ -42,46 +42,46 @@ export function AddScheduleModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4 text-emerald-50">
       <motion.div 
         initial={{ opacity: 0, y: 50, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 20, scale: 0.95 }}
-        className="bg-white w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl border border-neutral-100 max-h-[90vh] overflow-y-auto"
+        className="bg-[#051c13] w-full max-w-md rounded-3xl p-5 sm:p-6 shadow-2xl border border-amber-500/30 max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-base text-neutral-900">New Audio Schedule</h3>
-          <button onClick={onClose} className="p-1 rounded-full text-neutral-400 hover:text-neutral-600">
+          <h3 className="font-bold text-base text-amber-100">New Audio Schedule</h3>
+          <button onClick={onClose} className="p-1 rounded-full text-emerald-300/50 hover:text-amber-200">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="font-bold text-neutral-700 block mb-1">Schedule Name</label>
+            <label className="font-bold text-amber-200 block mb-1">Schedule Name</label>
             <input 
               type="text" 
               placeholder="e.g. Morning Maha Aarti" 
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              className="w-full px-3 py-2.5 rounded-xl bg-[#08291b] border border-amber-500/20 text-amber-100 placeholder-emerald-300/40 text-sm focus:ring-2 focus:ring-amber-500/30 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="font-bold text-neutral-700 block mb-1">Playback Time</label>
+            <label className="font-bold text-amber-200 block mb-1">Playback Time</label>
             <input 
               type="text" 
               value={time}
               onChange={(e) => setTime(e.target.value)}
               placeholder="06:30 AM"
-              className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm font-mono focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              className="w-full px-3 py-2.5 rounded-xl bg-[#08291b] border border-amber-500/20 text-amber-100 text-sm font-mono focus:ring-2 focus:ring-amber-500/30 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="font-bold text-neutral-700 block mb-1">Repeat Days</label>
+            <label className="font-bold text-amber-200 block mb-1">Repeat Days</label>
             <div className="flex items-center justify-between gap-1">
               {daysOfWeek.map(day => (
                 <button
@@ -90,8 +90,8 @@ export function AddScheduleModal({ onClose }: { onClose: () => void }) {
                   onClick={() => toggleDay(day)}
                   className={`flex-1 py-2 rounded-lg text-xs font-semibold transition ${
                     repeatDays.includes(day)
-                      ? 'bg-orange-600 text-white'
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
+                      ? 'bg-amber-500 text-emerald-950 font-bold'
+                      : 'bg-[#08291b] text-emerald-200/70 hover:bg-[#0a3322] border border-amber-500/15'
                   }`}
                 >
                   {day}
@@ -101,25 +101,25 @@ export function AddScheduleModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <label className="font-bold text-neutral-700 block mb-1">Playlist / Song Selection</label>
+            <label className="font-bold text-amber-200 block mb-1">Playlist / Song Selection</label>
             <select 
               value={playlist}
               onChange={(e) => setPlaylist(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-neutral-200 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none"
+              className="w-full px-3 py-2.5 rounded-xl bg-[#08291b] border border-amber-500/20 text-amber-100 text-sm focus:ring-2 focus:ring-amber-500/30 focus:outline-none"
             >
-              <option>Morning Aarti (12 songs)</option>
-              <option>Evening Aarti (8 songs)</option>
-              <option>Ganpati Special (15 songs)</option>
-              <option>Visarjan High-Energy (10 songs)</option>
-              <option>Track #01 - Sukh Karta Dukh Harta</option>
-              <option>Track #04 - Vakratunda Mahakaya</option>
+              <option className="bg-[#051c13]">Morning Aarti (12 songs)</option>
+              <option className="bg-[#051c13]">Evening Aarti (8 songs)</option>
+              <option className="bg-[#051c13]">Ganpati Special (15 songs)</option>
+              <option className="bg-[#051c13]">Visarjan High-Energy (10 songs)</option>
+              <option className="bg-[#051c13]">Track #01 - Sukh Karta Dukh Harta</option>
+              <option className="bg-[#051c13]">Track #04 - Vakratunda Mahakaya</option>
             </select>
           </div>
 
           <div>
-            <div className="flex justify-between font-bold text-neutral-700 mb-1">
+            <div className="flex justify-between font-bold text-amber-200 mb-1">
               <span>Volume Level</span>
-              <span className="font-mono text-orange-600">{volume}%</span>
+              <span className="font-mono text-amber-300">{volume}%</span>
             </div>
             <input 
               type="range"
@@ -131,19 +131,19 @@ export function AddScheduleModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <div className="flex items-center justify-between p-3 bg-neutral-50 rounded-xl border border-neutral-200/60">
+          <div className="flex items-center justify-between p-3 bg-[#08291b] rounded-xl border border-amber-500/15">
             <div>
-              <div className="font-bold text-neutral-800">Enable Schedule</div>
-              <div className="text-neutral-400">Arm timer for automatic trigger</div>
+              <div className="font-bold text-amber-100">Enable Schedule</div>
+              <div className="text-emerald-300/50">Arm timer for automatic trigger</div>
             </div>
             <button 
               type="button"
               onClick={() => setEnabled(!enabled)}
               className={`w-12 h-7 rounded-full p-0.5 transition-colors ${
-                enabled ? 'bg-orange-600' : 'bg-neutral-300'
+                enabled ? 'bg-amber-500' : 'bg-[#051c13] border border-amber-500/20'
               }`}
             >
-              <div className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform ${
+              <div className={`w-6 h-6 rounded-full bg-emerald-950 shadow-md transform transition-transform ${
                 enabled ? 'translate-x-5' : 'translate-x-0'
               }`}></div>
             </button>
@@ -153,13 +153,13 @@ export function AddScheduleModal({ onClose }: { onClose: () => void }) {
             <button 
               type="button"
               onClick={onClose}
-              className="flex-1 py-3 rounded-xl bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-semibold active:scale-95 transition"
+              className="flex-1 py-3 rounded-xl bg-[#08291b] hover:bg-[#0a3322] text-amber-200 font-semibold border border-amber-500/20 active:scale-95 transition"
             >
               Cancel
             </button>
             <button 
               type="submit"
-              className="flex-1 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold shadow-sm active:scale-95 transition"
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-emerald-950 font-bold shadow-md active:scale-95 transition"
             >
               Save Schedule
             </button>
