@@ -1,8 +1,12 @@
-import { Radio, Play, Pause } from 'lucide-react';
+import { Radio, Volume2, Pause, Play, LogOut } from 'lucide-react';
 import { useAudio } from '../../context/AudioContext';
 import { motion, AnimatePresence } from 'motion/react';
 
-export function Header() {
+interface HeaderProps {
+  onLogout?: () => void;
+}
+
+export function Header({ onLogout }: HeaderProps) {
   const { isSystemOnline, toggleSystemOnline, commandStatus, isPlaying, togglePlay } = useAudio();
 
   return (
@@ -93,6 +97,18 @@ export function Header() {
             {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             <span className="hidden sm:inline">{isPlaying ? "Pause Audio" : "Resume"}</span>
           </button>
+
+          {/* Admin Sign Out / Lock Button */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 bg-[#08291b] hover:bg-rose-500/20 text-amber-200/70 hover:text-rose-300 border border-amber-500/20 hover:border-rose-500/30 transition active:scale-95 shadow-sm"
+              title="Lock Console / Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden md:inline">Lock</span>
+            </button>
+          )}
         </div>
 
       </div>
