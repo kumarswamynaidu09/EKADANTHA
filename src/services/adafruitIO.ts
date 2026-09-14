@@ -29,7 +29,9 @@ export function parsePlayerStatus(payload: string): PlayerStatusParsed | null {
 export function parseMusicLibrary(payload: string): Song[] {
   if (!payload || payload.trim() === "") return [];
   const lines = payload.split(/[\n\r]+/);
-  const parsedSongs: Song[] = [];
+  
+  // First pass: extract all valid track id and title entries
+  const validEntries: { id: number; title: string }[] = [];
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
@@ -39,7 +41,14 @@ export function parseMusicLibrary(payload: string): Song[] {
     const title = trimmed.slice(firstPipe + 1).trim();
     const id = parseInt(idStr, 10);
     if (isNaN(id)) continue;
+    validEntries.push({ id, title });
+  }
 
+  if (validEntries.length === 0) return [];
+
+  const totalTracks = validEntries.length;
+
+  return validEntries.map(({ id, title }) => {
     // Generate neat metadata based on song title
     let artwork = "🕉️";
     let category = "Chant";
@@ -58,18 +67,17 @@ export function parseMusicLibrary(payload: string): Song[] {
       category = "Devotional";
     }
 
-    parsedSongs.push({
+    return {
       id,
-      fileNum: `${id < 10 ? '0' : ''}${id} / ${lines.length}`,
+      fileNum: `${String(id).padStart(2, '0')} / ${String(totalTracks).padStart(2, '0')}`,
       title: title || `Track ${id}`,
       artist: "Pico SD Card",
       category,
       duration: "4:00",
       durationSec: 240,
       artwork
-    });
-  }
-  return parsedSongs;
+    };
+  });
 }
 
 // Parse schedule-status payload

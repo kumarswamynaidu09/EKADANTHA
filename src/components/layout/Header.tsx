@@ -83,8 +83,7 @@ export function Header() {
           {/* Audio Stop / Pause */}
           <button 
             onClick={togglePlay}
-            disabled={!isSystemOnline}
-            className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 disabled:opacity-40 ${
+            className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 ${
               isPlaying 
                 ? 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/40' 
                 : 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/40'

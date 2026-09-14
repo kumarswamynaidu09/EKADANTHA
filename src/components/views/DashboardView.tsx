@@ -115,8 +115,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
           <div className="flex items-center gap-3 sm:gap-5">
             <button 
               onClick={prevTrack}
-              disabled={!isSystemOnline}
-              className="w-12 h-12 rounded-full flex items-center justify-center text-amber-200 bg-[#082b1c] border border-amber-500/20 hover:bg-[#0a3522] active:scale-95 transition disabled:opacity-40"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-amber-200 bg-[#082b1c] border border-amber-500/20 hover:bg-[#0a3522] active:scale-95 transition"
               aria-label="Previous Track"
             >
               <SkipBack className="w-5 h-5 fill-current" />
@@ -124,8 +123,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
 
             <button 
               onClick={togglePlay}
-              disabled={!isSystemOnline}
-              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-emerald-950 font-bold shadow-lg shadow-amber-500/25 active:scale-95 transition-transform duration-150 disabled:opacity-40 bg-gradient-to-tr from-amber-400 via-amber-500 to-yellow-500"
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-emerald-950 font-bold shadow-lg shadow-amber-500/25 active:scale-95 transition-transform duration-150 bg-gradient-to-tr from-amber-400 via-amber-500 to-yellow-500"
               aria-label={isPlaying ? "Pause" : "Play"}
             >
               {isPlaying ? (
@@ -137,8 +135,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
 
             <button 
               onClick={nextTrack}
-              disabled={!isSystemOnline}
-              className="w-12 h-12 rounded-full flex items-center justify-center text-amber-200 bg-[#082b1c] border border-amber-500/20 hover:bg-[#0a3522] active:scale-95 transition disabled:opacity-40"
+              className="w-12 h-12 rounded-full flex items-center justify-center text-amber-200 bg-[#082b1c] border border-amber-500/20 hover:bg-[#0a3522] active:scale-95 transition"
               aria-label="Next Track"
             >
               <SkipForward className="w-5 h-5 fill-current" />
@@ -194,7 +191,6 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
                   value={volume}
                   onChange={(e) => setVolume(Number(e.target.value))}
                   className="w-full h-8"
-                  disabled={!isSystemOnline}
                 />
               </div>
               <button 
@@ -212,8 +208,7 @@ export function DashboardView({ onOpenMusic }: DashboardViewProps) {
                   <button
                     key={v}
                     onClick={() => setVolume(targetVol)}
-                    disabled={!isSystemOnline}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95 disabled:opacity-40 ${
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95 ${
                       volume === targetVol 
                         ? 'bg-gradient-to-r from-amber-500 to-yellow-500 text-emerald-950 font-bold shadow-md' 
                         : 'bg-[#08291b] text-emerald-200/70 hover:bg-[#0a3322] border border-amber-500/10'

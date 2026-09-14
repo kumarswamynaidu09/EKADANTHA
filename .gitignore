@@ -8,5 +8,7 @@ coverage/
 .env.local
 .env.*.local
 .env*
+hardware/
 !.env.example
+
 

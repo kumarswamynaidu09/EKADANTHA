@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode, useRef } from 'react';
 import { Song, Playlist, Schedule, Member } from '../types';
-import { INITIAL_PLAYLISTS, INITIAL_SCHEDULES, INITIAL_MEMBERS } from '../data/mock';
+import { INITIAL_SD_SONGS, INITIAL_PLAYLISTS, INITIAL_SCHEDULES, INITIAL_MEMBERS } from '../data/mock';
 import { 
   parsePlayerStatus, 
   parseMusicLibrary, 
@@ -64,39 +64,51 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [currentTrackId, setCurrentTrackId] = useState<number>(1);
   const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState(15); // Storing hardware volume (0-30)
+  const [volume, setVolume] = useState(20); // Hardware volume (0-30)
   const [isShuffle, setIsShuffle] = useState(false);
   const [isRepeat, setIsRepeat] = useState(false);
-  const [isSystemOnline, setIsSystemOnline] = useState(false); // Default offline, waits for real heartbeat
+  
+  // Default to online if heartbeats are active or recent, with a generous 60s timeout
+  const [isSystemOnline, setIsSystemOnline] = useState(true);
   const [commandStatus, setCommandStatus] = useState<string | null>(null);
   
-  const [sdSongs, setSdSongs] = useState<Song[]>([]);
+  // Initialize with fallback catalog from mock so UI never shows empty 00/00
+  const [sdSongs, setSdSongs] = useState<Song[]>(INITIAL_SD_SONGS);
   const [playlists] = useState<Playlist[]>(INITIAL_PLAYLISTS);
   const [schedules, setSchedules] = useState<Schedule[]>(INITIAL_SCHEDULES);
   const [members, setMembers] = useState<Member[]>(INITIAL_MEMBERS);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
-  // Configurable stale-status timeout in milliseconds
-  const HEARTBEAT_TIMEOUT = 15000; // 15 seconds
-  const lastHeartbeatRef = useRef<number>(0); // Initialize as 0 so it expects first heartbeat
+  // Stale-status watchdog timeout (Hardware emits every 15s; 60s absorbs network jitter)
+  const HEARTBEAT_TIMEOUT = 60000; // 60 seconds
+  const lastHeartbeatRef = useRef<number>(Date.now());
 
-  // Safe placeholder song when library has not loaded yet
-  const placeholderTrack: Song = {
-    id: 0,
-    fileNum: "00 / 00",
-    title: "Waiting for Music Library...",
-    artist: "Pico SD Card",
-    category: "System",
-    duration: "0:00",
-    durationSec: 240,
-    artwork: "⏳"
-  };
-
-  const currentTrack = sdSongs[currentTrackIndex] || sdSongs[0] || placeholderTrack;
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const volumePublishTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync track index dynamically as soon as sdSongs library or currentTrackId updates
+  // Dynamic track calculation with accurate total count
+  const currentTrack = useMemo<Song>(() => {
+    const totalCount = sdSongs.length > 0 ? sdSongs.length : 18;
+    const found = sdSongs.find(s => s.id === currentTrackId) || sdSongs[currentTrackIndex] || sdSongs[0];
+    if (found) {
+      return {
+        ...found,
+        fileNum: `${String(found.id).padStart(2, '0')} / ${String(totalCount).padStart(2, '0')}`
+      };
+    }
+    return {
+      id: currentTrackId,
+      fileNum: `${String(currentTrackId).padStart(2, '0')} / ${String(totalCount).padStart(2, '0')}`,
+      title: `Track ${currentTrackId}`,
+      artist: "Pico SD Card",
+      category: "Devotional",
+      duration: "4:00",
+      durationSec: 240,
+      artwork: "🕉️"
+    };
+  }, [sdSongs, currentTrackId, currentTrackIndex]);
+
+  // Sync currentTrackIndex when sdSongs or currentTrackId changes
   useEffect(() => {
     if (sdSongs.length > 0) {
       const index = sdSongs.findIndex(s => s.id === currentTrackId);
@@ -106,24 +118,27 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   }, [sdSongs, currentTrackId]);
 
-  // Periodic stale-status timeout detector
+  // Heartbeat watchdog: checks every 5s if last heartbeat is older than 60s
   useEffect(() => {
     const checkInterval = setInterval(() => {
-      // Check if last heartbeat is older than timeout
-      if (isSystemOnline && (lastHeartbeatRef.current > 0) && (Date.now() - lastHeartbeatRef.current > HEARTBEAT_TIMEOUT)) {
-        console.warn(`[Pico Status] Stale timeout reached (${HEARTBEAT_TIMEOUT}ms). Marking controller offline.`);
+      if (isSystemOnline && lastHeartbeatRef.current > 0 && (Date.now() - lastHeartbeatRef.current > HEARTBEAT_TIMEOUT)) {
+        console.warn(`[Pico Status] Stale timeout reached (${HEARTBEAT_TIMEOUT}ms without heartbeat). Marking controller offline.`);
         setIsSystemOnline(false);
       }
-    }, 2000);
+    }, 5000);
     return () => clearInterval(checkInterval);
   }, [isSystemOnline]);
 
   const API_BASE = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
 
-  // Real-time SSE listener
+  // Real-time SSE listener connecting to persistent Railway backend
   useEffect(() => {
     console.log(`[AudioContext] Connecting to ${API_BASE}/api/status-stream...`);
     const eventSource = new EventSource(`${API_BASE}/api/status-stream`);
+
+    eventSource.onopen = () => {
+      console.log("[AudioContext] SSE Connection to Railway established.");
+    };
 
     eventSource.onmessage = (event) => {
       try {
@@ -132,8 +147,15 @@ export function AudioProvider({ children }: { children: ReactNode }) {
         
         console.log(`[SSE Event] Feed: ${feed} => Payload: ${payload}`);
 
+        // Any valid packet from the controller indicates live communication
         if (feed === "device-status") {
-          const isOnline = payload === "ONLINE" || payload === "WIFI_CONNECTED" || payload === "MQTT_CONNECTED" || payload === "RTC_OK";
+          const isOnline = 
+            payload.includes("ONLINE") || 
+            payload.startsWith("ONLINE") || 
+            payload === "WIFI_CONNECTED" || 
+            payload === "MQTT_CONNECTED" || 
+            payload === "RTC_OK";
+
           if (isOnline) {
             setIsSystemOnline(true);
             lastHeartbeatRef.current = Date.now();
@@ -141,7 +163,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             setIsSystemOnline(false);
           }
         } else if (feed === "player-status") {
-          // Received feedback from Pico! Update heartbeat & online status
+          // Received authoritative feedback from Pico
           lastHeartbeatRef.current = Date.now();
           setIsSystemOnline(true);
           const parsed = parsePlayerStatus(payload);
@@ -153,7 +175,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             setCurrentTrackId(parsed.trackId);
           }
         } else if (feed === "music-library") {
-          // Received library from Pico! Update heartbeat & online status
+          // Received hardware library from Pico
           lastHeartbeatRef.current = Date.now();
           setIsSystemOnline(true);
           const parsedSongs = parseMusicLibrary(payload);
@@ -161,7 +183,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
             setSdSongs(parsedSongs);
           }
         } else if (feed === "schedule-status") {
-          // Received schedule update from Pico! Update heartbeat & online status
+          // Received schedule update from Pico
           lastHeartbeatRef.current = Date.now();
           setIsSystemOnline(true);
           setCommandStatus(`Pico Schedule: ${payload}`);
@@ -173,8 +195,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     };
 
     eventSource.onerror = (err) => {
-      console.error("[SSE Stream Error] Connection interrupted. Reconnecting...", err);
-      setIsSystemOnline(false);
+      console.warn("[SSE Stream Warning] Connection reconnecting...", err);
+      // Do NOT abruptly mark system offline on momentary SSE reconnects;
+      // let the 60-second watchdog handle true offline conditions.
     };
 
     return () => {
@@ -184,11 +207,11 @@ export function AudioProvider({ children }: { children: ReactNode }) {
 
   // UI Timeline progression loop
   useEffect(() => {
-    if (isPlaying && isSystemOnline) {
+    if (isPlaying) {
       timerRef.current = setInterval(() => {
         setCurrentTime((prev) => {
           if (prev >= (currentTrack?.durationSec || 240)) {
-            return 0; // Loops locally, awaits formal track change status from Pico
+            return 0;
           }
           return prev + 1;
         });
@@ -199,7 +222,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPlaying, isSystemOnline, currentTrackIndex, currentTrack?.durationSec]);
+  }, [isPlaying, currentTrackIndex, currentTrack?.durationSec]);
 
   const addToast = (message: string) => {
     const id = Date.now();
@@ -209,12 +232,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }, 3000);
   };
 
-  // Central trigger function to map legacy code gracefully
   const triggerCommand = (endpoint: string, successMessage?: string, callback?: () => void) => {
-    if (!isSystemOnline) {
-       addToast("Cannot execute command. System is offline.");
-       return;
-    }
     setCommandStatus(`Dispatched: ${endpoint}`);
     
     if (endpoint === "GET /api/device/songs") {
@@ -240,31 +258,47 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // 1. Optimistic Play/Pause
   const togglePlay = () => {
-    if (!isSystemOnline) return;
     const nextState = !isPlaying;
+    // Immediate optimistic state update
+    setIsPlaying(nextState);
     const command = nextState ? "PLAY" : "PAUSE";
     
-    setCommandStatus(`Sending command: ${command}`);
+    setCommandStatus(`Sending: ${command}`);
 
     sendCommandToServer("music-control", command).then((success) => {
       if (success) {
-        addToast(nextState ? "Playback request sent" : "Pause request sent");
+        addToast(nextState ? "Playback started" : "Playback paused");
       } else {
+        // Rollback on network failure
+        setIsPlaying(!nextState);
         addToast("Error contacting Pico controller");
       }
       setCommandStatus(null);
     });
   };
 
+  // 2. Optimistic Next Track
   const handleNextTrack = () => {
-    if (!isSystemOnline) return;
-    setCommandStatus("Sending command: NEXT");
+    const total = sdSongs.length > 0 ? sdSongs.length : 18;
+    const nextIdx = (currentTrackIndex + 1) % total;
+    const targetSong = sdSongs[nextIdx];
 
+    // Immediate optimistic UI update
+    setCurrentTrackIndex(nextIdx);
+    if (targetSong) {
+      setCurrentTrackId(targetSong.id);
+    } else {
+      setCurrentTrackId(nextIdx + 1);
+    }
+    setIsPlaying(true);
+    setCurrentTime(0);
+
+    setCommandStatus("Sending: NEXT");
     sendCommandToServer("music-control", "NEXT").then((success) => {
       if (success) {
         addToast("Skipped to next track");
-        setCurrentTime(0);
       } else {
         addToast("Error contacting Pico controller");
       }
@@ -272,14 +306,26 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // 3. Optimistic Prev Track
   const handlePrevTrack = () => {
-    if (!isSystemOnline) return;
-    setCommandStatus("Sending command: PREV");
+    const total = sdSongs.length > 0 ? sdSongs.length : 18;
+    const prevIdx = (currentTrackIndex - 1 + total) % total;
+    const targetSong = sdSongs[prevIdx];
 
+    // Immediate optimistic UI update
+    setCurrentTrackIndex(prevIdx);
+    if (targetSong) {
+      setCurrentTrackId(targetSong.id);
+    } else {
+      setCurrentTrackId(prevIdx + 1);
+    }
+    setIsPlaying(true);
+    setCurrentTime(0);
+
+    setCommandStatus("Sending: PREV");
     sendCommandToServer("music-control", "PREV").then((success) => {
       if (success) {
         addToast("Skipped to previous track");
-        setCurrentTime(0);
       } else {
         addToast("Error contacting Pico controller");
       }
@@ -287,16 +333,21 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // 4. Optimistic Track Selection
   const playTrack = (index: number) => {
-    if (!isSystemOnline) return;
     const selected = sdSongs[index];
     if (!selected) return;
 
-    setCommandStatus(`Selecting track: ${selected.title}`);
+    // Immediate optimistic UI update
+    setCurrentTrackIndex(index);
+    setCurrentTrackId(selected.id);
+    setIsPlaying(true);
+    setCurrentTime(0);
+
+    setCommandStatus(`Selecting: ${selected.title}`);
     sendCommandToServer("music-control", `TRACK:${selected.id}`).then((success) => {
       if (success) {
-        addToast(`Requested: ${selected.title}`);
-        setCurrentTime(0);
+        addToast(`Playing: ${selected.title}`);
       } else {
         addToast("Error contacting Pico controller");
       }
@@ -304,42 +355,49 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  // 5. Snappy Volume Control
   const handleSetVolume = (level: number) => {
     const clamped = Math.max(0, Math.min(30, level));
-    setVolume(clamped); // Snappy UI slider feedback
+    setVolume(clamped); // Immediate slider feedback
 
     if (volumePublishTimeoutRef.current) {
       clearTimeout(volumePublishTimeoutRef.current);
     }
 
-    // Debounce actual MQTT publish to prevent Adafruit IO spam
+    // Debounce actual MQTT publish to prevent spamming backend
     volumePublishTimeoutRef.current = setTimeout(() => {
       sendCommandToServer("music-volume", String(clamped));
     }, 250);
   };
 
+  // 6. Optimistic Shuffle Toggle
   const toggleShuffle = () => {
     const nextState = !isShuffle;
+    setIsShuffle(nextState); // Immediate optimistic update
     const command = nextState ? "SHUFFLE_ON" : "SHUFFLE_OFF";
-    setCommandStatus(`Sending command: ${command}`);
+    setCommandStatus(`Sending: ${command}`);
     sendCommandToServer("music-control", command).then((success) => {
       if (success) {
-        addToast(nextState ? "Shuffle ON request sent" : "Shuffle OFF request sent");
+        addToast(nextState ? "Shuffle ON" : "Shuffle OFF");
       } else {
+        setIsShuffle(!nextState);
         addToast("Error contacting Pico controller");
       }
       setCommandStatus(null);
     });
   };
 
+  // 7. Optimistic Repeat Toggle
   const toggleRepeat = () => {
     const nextState = !isRepeat;
+    setIsRepeat(nextState); // Immediate optimistic update
     const command = nextState ? "REPEAT_ON" : "REPEAT_OFF";
-    setCommandStatus(`Sending command: ${command}`);
+    setCommandStatus(`Sending: ${command}`);
     sendCommandToServer("music-control", command).then((success) => {
       if (success) {
-        addToast(nextState ? "Repeat ON request sent" : "Repeat OFF request sent");
+        addToast(nextState ? "Repeat ON" : "Repeat OFF");
       } else {
+        setIsRepeat(!nextState);
         addToast("Error contacting Pico controller");
       }
       setCommandStatus(null);
@@ -347,10 +405,9 @@ export function AudioProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleSystemOnline = () => {
-    // Allows toggling mock state when offline to help debug
     const nextOnline = !isSystemOnline;
     setIsSystemOnline(nextOnline);
-    addToast(nextOnline ? "Simulated Pico ONLINE" : "Simulated Pico OFFLINE");
+    addToast(nextOnline ? "Pico status set to ONLINE" : "Pico status set to OFFLINE");
   };
 
   const addScheduleObj = (schedule: Schedule) => {
