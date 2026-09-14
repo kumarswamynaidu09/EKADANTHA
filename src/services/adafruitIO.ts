@@ -173,10 +173,12 @@ export function serializePlaylistStop(): string {
   return `PLAYLIST_STOP`;
 }
 
+const API_BASE = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+
 // API bridge to the server command publisher
 export async function sendCommandToServer(feed: string, payload: string): Promise<boolean> {
   try {
-    const response = await fetch('/api/command', {
+    const response = await fetch(`${API_BASE}/api/command`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -7,9 +7,21 @@ import { createServer as createViteServer } from "vite";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+
+// Enable CORS for frontend deployment flexibility
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 const AIO_USERNAME = process.env.ADAFRUIT_IO_USERNAME || "kumarswamynaidu09";
+
 const AIO_KEY = process.env.ADAFRUIT_IO_KEY;
 
 // Cache the latest received status payloads for each feed
@@ -178,11 +190,13 @@ app.post("/api/command", (req, res) => {
 
   // If MQTT is connected, publish to Adafruit IO
   if (mqttClient && mqttClient.connected) {
-    mqttClient.publish(topic, payloadStr, { qos: 0 }, (err) => {
+    console.log(`[MQTT Publishing] Topic: ${topic} | Payload: ${payloadStr} (QoS 1)`);
+    mqttClient.publish(topic, payloadStr, { qos: 1 }, (err) => {
       if (err) {
-        console.error(`[MQTT Publish Error] Failed to publish to ${topic}:`, err);
-        return res.status(500).json({ error: "Failed to publish to Adafruit IO" });
+        console.error(`[MQTT Publish Error] Failed to publish to ${topic} (Payload: ${payloadStr}):`, err);
+        return res.status(500).json({ error: "Failed to publish to Adafruit IO", details: err.message });
       }
+      console.log(`[MQTT Publish Success] Delivered to Adafruit IO: ${topic} => ${payloadStr}`);
       return res.json({ success: true, mode: "real", status: "published" });
     });
   } else {

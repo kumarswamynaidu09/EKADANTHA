@@ -118,10 +118,12 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(checkInterval);
   }, [isSystemOnline]);
 
+  const API_BASE = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+
   // Real-time SSE listener
   useEffect(() => {
-    console.log("[AudioContext] Connecting to /api/status-stream...");
-    const eventSource = new EventSource("/api/status-stream");
+    console.log(`[AudioContext] Connecting to ${API_BASE}/api/status-stream...`);
+    const eventSource = new EventSource(`${API_BASE}/api/status-stream`);
 
     eventSource.onmessage = (event) => {
       try {
@@ -216,7 +218,7 @@ export function AudioProvider({ children }: { children: ReactNode }) {
     setCommandStatus(`Dispatched: ${endpoint}`);
     
     if (endpoint === "GET /api/device/songs") {
-      fetch("/api/rescan", { method: "POST" })
+      fetch(`${API_BASE}/api/rescan`, { method: "POST" })
         .then(res => res.json())
         .then(() => {
           if (callback) callback();
