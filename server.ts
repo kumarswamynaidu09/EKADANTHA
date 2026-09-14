@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import dotenv from "dotenv";
 import mqtt from "mqtt";
 import { createServer as createViteServer } from "vite";
@@ -326,25 +327,39 @@ app.get("/api/config", (req, res) => {
   });
 });
 
-// Serve frontend assets
+// Healthcheck endpoint for Railway / Cloud monitoring
+app.get("/health", (req, res) => {
+  res.status(200).send("OK");
+});
+
+// Serve frontend assets or fallback gracefully
 async function startServer() {
-  if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
-  } else {
-    const distPath = path.join(process.cwd(), "dist");
+  const distPath = path.join(process.cwd(), "dist");
+  const hasDist = fs.existsSync(path.join(distPath, "index.html"));
+
+  if (process.env.NODE_ENV === "production" || hasDist) {
+    console.log(`[Server] Serving production static assets from ${distPath}`);
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
+  } else {
+    try {
+      console.log("[Server] Initializing Vite middleware for development...");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (err) {
+      console.error("[Server Warning] Failed to initialize Vite middleware:", err);
+    }
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[Server] Ekadantha application running on http://localhost:${PORT}`);
+    console.log(`[Server] Ekadantha application running on port ${PORT}`);
   });
 }
 
 startServer();
+
